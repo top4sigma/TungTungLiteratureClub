@@ -1,5 +1,6 @@
 import org.jline.terminal.Terminal;
 import org.jline.terminal.TerminalBuilder;
+import org.jline.utils.InfoCmp;
 
 public class Inputs {
 
@@ -14,7 +15,36 @@ public class Inputs {
         open = true;
     }
 
+    public static void startScreen() throws Exception {
+        if (!open) throw new IllegalStateException("Inputs not open");
+        terminal.puts(InfoCmp.Capability.enter_ca_mode);
+        terminal.puts(InfoCmp.Capability.clear_screen);
+        terminal.puts(InfoCmp.Capability.cursor_home);
+        terminal.flush();
+    }
+
+    public static void clearScreen() throws Exception {
+        if (!open) throw new IllegalStateException("Inputs not open");
+        terminal.puts(InfoCmp.Capability.clear_screen);
+        terminal.puts(InfoCmp.Capability.cursor_home);
+    }
+
+    public static void flush() throws Exception {
+        if (!open) throw new IllegalStateException("Inputs not open");
+        terminal.flush();
+    }
+
+    public static void stopScreen() {
+        if (terminal != null) {
+            try {
+                terminal.puts(InfoCmp.Capability.exit_ca_mode);
+                terminal.flush();
+            } catch (Exception ignored) {}
+        }
+    }
+
     public static void close() {
+        stopScreen();
         if (terminal != null) {
             try { terminal.close(); } catch (Exception ignored) {}
         }

@@ -3,44 +3,29 @@ import org.jline.utils.InfoCmp;
 
 public class TitleScreen {
 
-    public static int show(String[] options) throws Exception {
-
-        if (options.length > 4) {
-            throw new IllegalArgumentException(
-                "A maximum of 4 options is allowed."
-            );
-        }
-
+    public static int show() throws Exception {
+        String[] options = { "Play", "Settings", "Quit" };
         int selected = 0;
-
-        Inputs.open();
-        Terminal terminal = Inputs.getTerminal();
-
-        terminal.puts(InfoCmp.Capability.enter_ca_mode);
-        terminal.puts(InfoCmp.Capability.clear_screen);
-        terminal.puts(InfoCmp.Capability.cursor_home);
-        terminal.flush();
 
         try {
             while (true) {
 
-                terminal.puts(InfoCmp.Capability.clear_screen);
-                terminal.puts(InfoCmp.Capability.cursor_home);
+                Inputs.clearScreen();
 
                 // ASCII art area here
                 for (int i = 0; i < 8; i++) {
-                    terminal.writer().println();
+                    Inputs.getTerminal().writer().println();
                 }
 
                 for (int i = 0; i < options.length; i++) {
                     String option = options[i];
-                    if (selected == i) terminal.writer().print("\033[7m");
-                    terminal.writer().print(option);
-                    if (selected == i) terminal.writer().print("\033[27m");
-                    terminal.writer().println();
+                    if (selected == i) Inputs.getTerminal().writer().print("\033[7m");
+                    Inputs.getTerminal().writer().print(option);
+                    if (selected == i) Inputs.getTerminal().writer().print("\033[27m");
+                    Inputs.getTerminal().writer().println();
                 }
 
-                terminal.writer().flush();
+                Inputs.flush();
 
                 int key = Inputs.readKey();
 
@@ -58,15 +43,6 @@ public class TitleScreen {
                 }
             }
         } finally {
-            terminal.puts(InfoCmp.Capability.exit_ca_mode);
-            terminal.flush();
-            Inputs.close();
         }
-    }
-
-    public static void main(String[] args) throws Exception {
-        String[] options = { "Play", "Settings", "Quit" };
-        int choice = show(options);
-        System.out.println("You chose: " + options[choice]);
     }
 }
