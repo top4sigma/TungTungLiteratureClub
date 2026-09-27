@@ -1,3 +1,4 @@
+package subsystems;
 import java.io.*;
 
 public class DialogueSystem {

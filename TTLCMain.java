@@ -1,3 +1,7 @@
+import subsystems.Inputs;
+import subsystems.TitleScreen;
+import subsystems.SettingsMenu;
+
 public class TTLCMain {
     public static void main(String[] args) throws Exception {
         Inputs.open();
