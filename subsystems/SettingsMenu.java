@@ -5,11 +5,12 @@ import org.jline.utils.InfoCmp;
 public class SettingsMenu {
 
     public static int show() throws Exception {
-        String[] options = new String[]{"Text Speed", "Volume", "Difficulty"};
+        String[] options = new String[]{"Text Speed", "Volume", "Difficulty", "Return to Menu"};
         String[][] subOptions = new String[][]{
             new String[]{"Fast", "Medium", "Slow"},
             new String[]{"Loud", "Medium", "Low"},
-            new String[]{"Hard", "Medium", "Easy"}
+            new String[]{"Hard", "Medium", "Easy"},
+            new String[]{""}
         };
 
         int[] colWidths = new int[options.length];
@@ -32,7 +33,7 @@ public class SettingsMenu {
                 Inputs.clearScreen();
 
                 int flatIdx = 0;
-                for (int i = 0; i < options.length; i++) {
+                for (int i = 0; i < options.length - 1; i++) {
                     if (col == i) Inputs.getTerminal().writer().print("\033[7m");
                     Inputs.getTerminal().writer().print("  " + options[i]);
                     if (col == i) Inputs.getTerminal().writer().print("\033[27m");
@@ -49,6 +50,13 @@ public class SettingsMenu {
                     }
                     Inputs.getTerminal().writer().println();
                 }
+
+                // Render "Return to Menu" once at the end
+                if (col == options.length - 1) Inputs.getTerminal().writer().print("\033[7m");
+                Inputs.getTerminal().writer().print("  " + options[options.length - 1]);
+                if (col == options.length - 1) Inputs.getTerminal().writer().print("\033[27m");
+                Inputs.getTerminal().writer().println();
+                flatIdx++;
 
                 Inputs.flush();
 
@@ -74,6 +82,9 @@ public class SettingsMenu {
                         if (row > 0) row--;
                     }
                 } else if (key == 13 || key == 10) {
+                    if (col == options.length - 1) {
+                        return -1; // Return to menu
+                    }
                     int fi = 0;
                     for (int i = 0; i < col; i++) fi += 1 + subOptions[i].length;
                     fi += 1 + row;

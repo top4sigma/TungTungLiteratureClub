@@ -7,12 +7,19 @@ public class TTLCMain {
         Inputs.open();
         Inputs.startScreen();
 
-        int choice = TitleScreen.show();
+        while (true) {
+            int choice = TitleScreen.show();
 
-        String[] options = { "Play", "Settings", "Quit" };
-        if (options[choice].equals("Settings")) {
-            int setting = SettingsMenu.show();
-            System.out.println("Setting chosen: " + setting);
+            String[] options = { "Play", "Settings", "Quit" };
+            if (options[choice].equals("Settings")) {
+                while (true) {
+                    int setting = SettingsMenu.show();
+                    if (setting == -1) break;
+                    System.out.println("Setting chosen: " + setting);
+                }
+            } else if (options[choice].equals("Quit")) {
+                break;
+            }
         }
 
         Inputs.close();
