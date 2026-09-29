@@ -1,5 +1,6 @@
 package subsystems;
 import java.io.*;
+import java.util.*;
 
 public class DialogueSystem {
 
@@ -16,38 +17,30 @@ public class DialogueSystem {
 
         while ((st = bfro.readLine()) != null) {
 
-            // Blank line = completely new character
             if (st.trim().isEmpty()) {
 
                 if (character != null && dialogue.length() > 0) {
                     outputText(dialogue.toString(), character);
-                    // waitForEnter();
                 }
 
                 character = null;
                 dialogue.setLength(0);
             }
 
-            // * = new textbox
             else if (st.startsWith("*")) {
 
-                // Print previous textbox
                 if (character != null && dialogue.length() > 0) {
                     outputText(dialogue.toString(), character);
-                    // waitForEnter();
                 }
 
-                // Start the new textbox
                 dialogue.setLength(0);
                 dialogue.append(st);
             }
 
-            // First line = character name
             else if (character == null) {
                 character = st;
             }
 
-            // Normal dialogue line
             else {
 
                 if (dialogue.length() > 0) {
@@ -58,82 +51,74 @@ public class DialogueSystem {
             }
         }
 
-        // Print final textbox
         if (character != null && dialogue.length() > 0) {
             outputText(dialogue.toString(), character);
-            // waitForEnter();
         }
 
         bfro.close();
     }
 
 
-    public static void outputText(String input, String character) {
-
-        System.out.print("╔════ ");
-        System.out.print(character);
-        System.out.print(" ");
-
-        // Extra space after character name
-        for (int a = 0; a < 58 - (5 + character.length()); a++) {
-            System.out.print("═");
-        }
-
-        System.out.println("╗");
-
-        String[] lines = input.split("\n");
-
-        int lineCount = 0;
-
-        for (String line : lines) {
-
-            int length = line.length();
-            int repeats = Math.max(1, (int) Math.ceil(length / 59.0));
-
-            for (int i = 0; i < repeats; i++) {
-
-                System.out.print("║");
-
-                int start = i * 59;
-                int end = Math.min(start + 59, length);
-
-                String part = line.substring(start, end);
-
-                System.out.print(part);
-
-                for (int j = part.length(); j < 59; j++) {
-                    System.out.print(" ");
-                }
-
-                System.out.println("║");
-
-                lineCount++;
+    private static long getDelay() {
+        String speed = "Medium";
+        try (BufferedReader br = new BufferedReader(new FileReader("settings.json"))) {
+            StringBuilder json = new StringBuilder();
+            String line;
+            while ((line = br.readLine()) != null) json.append(line.trim());
+            String content = json.toString();
+            int idx = content.indexOf("\"textSpeed\"");
+            if (idx >= 0) {
+                idx = content.indexOf(':', idx) + 1;
+                int end = content.indexOf('"', idx + 1);
+                if (end > idx) speed = content.substring(idx + 1, end);
             }
+        } catch (IOException ignored) {}
+        switch (speed.toLowerCase()) {
+            case "fast":   return 20;
+            case "slow":   return 100;
+            default:       return 60;
         }
-
-        // Every textbox must be at least 2 lines tall
-        while (lineCount < 2) {
-
-            System.out.print("║");
-
-            for (int j = 0; j < 59; j++) {
-                System.out.print(" ");
-            }
-
-            System.out.println("║");
-
-            lineCount++;
-        }
-
-        System.out.println(
-                "╚═══════════════════════════════════════════════════════════╝"
-        );
     }
 
+    private static void printSlow(String text, long delay) throws Exception {
+        for (char c : text.toCharArray()) {
+            System.out.print(c);
+            System.out.flush();
+            Thread.sleep(delay);
+        }
+    }
 
-    // public static void waitForEnter() throws Exception {
+    public static void outputText(String input, String character) throws Exception {
+        long delay = getDelay();
 
-        // Temporary version:
-        //System.in.read();
-    // }
+        List<String> rows = new ArrayList<>();
+        for (String line : input.split("\n")) {
+            if (line.isEmpty()) {
+                rows.add("");
+                continue;
+            }
+            for (int i = 0; i < line.length(); i += 59) {
+                rows.add(line.substring(i, Math.min(i + 59, line.length())));
+            }
+        }
+        while (rows.size() < 2) rows.add("");
+
+        System.out.println("╔════ " + character + " "
+                + "═".repeat(Math.max(0, 58 - (5 + character.length()))) + "╗");
+        for (int i = 0; i < rows.size(); i++) {
+            System.out.println("║" + " ".repeat(59) + "║");
+        }
+        System.out.println("╚" + "═".repeat(59) + "╝");
+
+        System.out.print("\033[" + (rows.size() + 1) + "A");
+
+        for (int i = 0; i < rows.size(); i++) {
+            System.out.print("\033[2G");
+            printSlow(rows.get(i), delay);
+            if (i < rows.size() - 1) System.out.print("\033[1B");
+        }
+
+        System.out.print("\033[2B\r");
+        System.out.flush();
+    }
 }
