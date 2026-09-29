@@ -6,14 +6,15 @@ import java.util.*;
 
 public class SettingsMenu {
 
-    private static final String[] options = {"Text Speed", "Volume", "Difficulty", "Return to Menu"};
+    private static final String[] options = {"Text Speed", "Volume", "Difficulty", "Update Terminal Size", "Return to Menu"};
     private static final String[][] subOptions = {
         {"Fast", "Medium", "Slow"},
         {"Loud", "Medium", "Low"},
         {"Hard", "Medium", "Easy"},
+        {},
         {""}
     };
-    private static final String[] keys = {"textSpeed", "volume", "difficulty"};
+    private static final String[] keys = {"textSpeed", "volume", "difficulty", "termWidth", "termHeight"};
 
     public static int show() throws Exception {
         Map<String, String> settings = loadSettings();
@@ -50,6 +51,15 @@ public class SettingsMenu {
                 for (int i = 0; i < options.length - 1; i++) {
                     if (col == i) Inputs.getTerminal().writer().print("\033[7m");
                     Inputs.getTerminal().writer().print("  " + options[i]);
+                    if (i == 3) {
+                        String w = settings.getOrDefault("termWidth", "");
+                        String h = settings.getOrDefault("termHeight", "");
+                        if (!w.isEmpty() && !h.isEmpty()) {
+                            String display = w + "  x  " + h;
+                            int pad = Math.max(1, colWidths[i] - display.length());
+                            Inputs.getTerminal().writer().print(" " + display + " ".repeat(pad));
+                        }
+                    }
                     if (savedRows[i] >= 0) Inputs.getTerminal().writer().print(" <");
                     if (col == i) Inputs.getTerminal().writer().print("\033[27m");
                     Inputs.getTerminal().writer().println();
@@ -64,7 +74,7 @@ public class SettingsMenu {
                         flatIdx++;
                     }
                     Inputs.getTerminal().writer().println();
-		}
+                }
 
                 if (col == options.length - 1) Inputs.getTerminal().writer().print("\033[7m");
                 Inputs.getTerminal().writer().print("  " + options[options.length - 1]);
@@ -99,7 +109,19 @@ public class SettingsMenu {
                     if (col == options.length - 1) {
                         return -1;
                     }
-                    // Save setting to settings.json
+                    if (col == 3) {
+                        org.jline.terminal.Size sz = Inputs.getTerminal().getSize();
+                        String w = String.valueOf(sz.getColumns());
+                        String h = String.valueOf(sz.getRows());
+                        settings.put("termWidth", w);
+                        settings.put("termHeight", h);
+                        saveSettings(settings);
+                        ProcessBuilder pb = new ProcessBuilder("java", "-cp", ".", "GenerateAssets", w, h);
+                        pb.directory(new File("."));
+                        pb.inheritIO();
+                        pb.start();
+                        return col;
+                    }
                     settings.put(keys[col], subOptions[col][row]);
                     savedRows[col] = row;
                     saveSettings(settings);
@@ -115,6 +137,8 @@ public class SettingsMenu {
         settings.put("textSpeed", "Medium");
         settings.put("volume", "Medium");
         settings.put("difficulty", "Medium");
+        settings.put("termWidth", "80");
+        settings.put("termHeight", "24");
 
         try (BufferedReader br = new BufferedReader(new FileReader("settings.json"))) {
             StringBuilder json = new StringBuilder();
@@ -126,10 +150,12 @@ public class SettingsMenu {
             for (String k : keys) {
                 int idx = content.indexOf("\"" + k + "\"");
                 if (idx >= 0) {
-                    idx = content.indexOf(':', idx) + 1;
-                    int end = content.indexOf('"', idx + 1);
-                    if (end > idx) {
-                        settings.put(k, content.substring(idx + 1, end));
+                    idx = content.indexOf('"', content.indexOf(':', idx) + 1);
+                    if (idx > 0) {
+                        int end = content.indexOf('"', idx + 1);
+                        if (end > idx) {
+                            settings.put(k, content.substring(idx + 1, end));
+                        }
                     }
                 }
             }
