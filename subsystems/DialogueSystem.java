@@ -88,13 +88,16 @@ public class DialogueSystem {
         }
     }
 
+
     public static void outputText(String input, String character) throws Exception {
         long delay = getDelay();
 
         final int BOX_WIDTH = 59;
-        final int SPRITE_SPACE = 10; // Square space reserved for sprite
+        final int SPRITE_SPACE = 10;
 
         List<String> rows = new ArrayList<>();
+
+        int textWidth = BOX_WIDTH - SPRITE_SPACE - 1;
 
         for (String line : input.split("\n")) {
             if (line.isEmpty()) {
@@ -102,10 +105,10 @@ public class DialogueSystem {
                 continue;
             }
 
-            for (int i = 0; i < line.length(); i += (BOX_WIDTH - SPRITE_SPACE - 1)) {
+            for (int i = 0; i < line.length(); i += textWidth) {
                 rows.add(line.substring(
                         i,
-                        Math.min(i + (BOX_WIDTH - SPRITE_SPACE - 1), line.length())
+                        Math.min(i + textWidth, line.length())
                 ));
             }
         }
@@ -114,32 +117,52 @@ public class DialogueSystem {
             rows.add("");
         }
 
+        // Automatically detect terminal dimensions
+        int[] terminalSize = getTerminalSize();
+        int terminalWidth = terminalSize[0];
+        int terminalHeight = terminalSize[1];
+
+        // Center the textbox horizontally
+        int leftPadding = Math.max(0, (terminalWidth - BOX_WIDTH) / 2);
+        String padding = " ".repeat(leftPadding);
+
+        // Calculate how far down the textbox needs to be
+        int boxHeight = rows.size() + 2;
+        int topPadding = Math.max(0, terminalHeight - boxHeight);
+
+        // Move to the bottom of the terminal
+        System.out.print("\033[" + terminalHeight + ";1H");
+
+        // Move up to where the textbox should start
+        if (topPadding > 0) {
+            System.out.print("\033[" + topPadding + "A");
+        }
+
         // Top border
         String title = "════ " + character + " ";
         int remaining = BOX_WIDTH - title.length();
 
         System.out.println(
+                padding +
                 "╔" +
                 title +
                 "═".repeat(Math.max(0, remaining)) +
                 "╗"
         );
 
-        // Text rows
-        for (int i = 0; i < rows.size(); i++) {
+        // Dialogue text
+        for (String row : rows) {
 
-            String text = rows.get(i);
-
-            int textWidth = BOX_WIDTH - SPRITE_SPACE - 1;
+            String text = row;
 
             if (text.length() < textWidth) {
                 text += " ".repeat(textWidth - text.length());
             }
 
             System.out.println(
+                    padding +
                     "║" +
-                    " ".repeat(SPRITE_SPACE) +
-                    " " +
+                    " ".repeat(SPRITE_SPACE + 1) +
                     text +
                     "║"
             );
@@ -147,6 +170,7 @@ public class DialogueSystem {
 
         // Bottom border
         System.out.println(
+                padding +
                 "╚" +
                 "═".repeat(BOX_WIDTH) +
                 "╝"
@@ -159,8 +183,12 @@ public class DialogueSystem {
 
         for (int i = 0; i < rows.size(); i++) {
 
-            // Move past the left sprite space.
-            System.out.print("\033[" + (SPRITE_SPACE + 2) + "C");
+            // Move to the text area
+            System.out.print(
+                    "\033[" +
+                    (leftPadding + SPRITE_SPACE + 2) +
+                    "G"
+            );
 
             printSlow(rows.get(i), delay);
 
@@ -169,7 +197,82 @@ public class DialogueSystem {
             }
         }
 
-        System.out.print("\033[2B\r");
+        // Move cursor below the textbox
+        System.out.print("\033[" + (rows.size() + 1) + "B");
+        System.out.print("\r");
         System.out.flush();
+    }
+
+
+    /**
+     * Gets the current terminal width and height.
+     *
+     * Returns:
+     * [0] = width
+     * [1] = height
+     */
+    private static int[] getTerminalSize() {
+
+        // Windows
+        if (System.getProperty("os.name").toLowerCase().contains("win")) {
+
+            try {
+                Process process = new ProcessBuilder(
+                        "cmd", "/c", "mode con"
+                ).redirectErrorStream(true).start();
+
+                BufferedReader reader = new BufferedReader(
+                        new InputStreamReader(process.getInputStream())
+                );
+
+                String line;
+                int width = -1;
+                int height = -1;
+
+                while ((line = reader.readLine()) != null) {
+
+                    line = line.trim();
+
+                    if (line.startsWith("Columns:")) {
+                        width = Integer.parseInt(
+                                line.substring("Columns:".length()).trim()
+                        );
+                    }
+
+                    else if (line.startsWith("Lines:")) {
+                        height = Integer.parseInt(
+                                line.substring("Lines:".length()).trim()
+                        );
+                    }
+                }
+
+                process.waitFor();
+
+                if (width > 0 && height > 0) {
+                    return new int[] { width, height };
+                }
+
+            } catch (Exception ignored) {
+            }
+        }
+
+        // Linux / macOS
+        try {
+            String columns = System.getenv("COLUMNS");
+            String lines = System.getenv("LINES");
+
+            if (columns != null && lines != null) {
+                int width = Integer.parseInt(columns);
+                int height = Integer.parseInt(lines);
+
+                if (width > 0 && height > 0) {
+                    return new int[] { width, height };
+                }
+            }
+        } catch (Exception ignored) {
+        }
+
+        // Safe fallback
+        return new int[] { 120, 30 };
     }
 }
