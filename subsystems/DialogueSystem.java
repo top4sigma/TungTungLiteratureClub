@@ -91,31 +91,82 @@ public class DialogueSystem {
     public static void outputText(String input, String character) throws Exception {
         long delay = getDelay();
 
+        final int BOX_WIDTH = 59;
+        final int SPRITE_SPACE = 10; // Square space reserved for sprite
+
         List<String> rows = new ArrayList<>();
+
         for (String line : input.split("\n")) {
             if (line.isEmpty()) {
                 rows.add("");
                 continue;
             }
-            for (int i = 0; i < line.length(); i += 59) {
-                rows.add(line.substring(i, Math.min(i + 59, line.length())));
+
+            for (int i = 0; i < line.length(); i += (BOX_WIDTH - SPRITE_SPACE - 1)) {
+                rows.add(line.substring(
+                        i,
+                        Math.min(i + (BOX_WIDTH - SPRITE_SPACE - 1), line.length())
+                ));
             }
         }
-        while (rows.size() < 2) rows.add("");
 
-        System.out.println("╔════ " + character + " "
-                + "═".repeat(Math.max(0, 58 - (5 + character.length()))) + "╗");
-        for (int i = 0; i < rows.size(); i++) {
-            System.out.println("║" + " ".repeat(59) + "║");
+        while (rows.size() < 2) {
+            rows.add("");
         }
-        System.out.println("╚" + "═".repeat(59) + "╝");
 
+        // Top border
+        String title = "════ " + character + " ";
+        int remaining = BOX_WIDTH - title.length();
+
+        System.out.println(
+                "╔" +
+                title +
+                "═".repeat(Math.max(0, remaining)) +
+                "╗"
+        );
+
+        // Text rows
+        for (int i = 0; i < rows.size(); i++) {
+
+            String text = rows.get(i);
+
+            int textWidth = BOX_WIDTH - SPRITE_SPACE - 1;
+
+            if (text.length() < textWidth) {
+                text += " ".repeat(textWidth - text.length());
+            }
+
+            System.out.println(
+                    "║" +
+                    " ".repeat(SPRITE_SPACE) +
+                    " " +
+                    text +
+                    "║"
+            );
+        }
+
+        // Bottom border
+        System.out.println(
+                "╚" +
+                "═".repeat(BOX_WIDTH) +
+                "╝"
+        );
+
+        /*
+        * Move back to the first dialogue line.
+        */
         System.out.print("\033[" + (rows.size() + 1) + "A");
 
         for (int i = 0; i < rows.size(); i++) {
-            System.out.print("\033[2G");
+
+            // Move past the left sprite space.
+            System.out.print("\033[" + (SPRITE_SPACE + 2) + "C");
+
             printSlow(rows.get(i), delay);
-            if (i < rows.size() - 1) System.out.print("\033[1B");
+
+            if (i < rows.size() - 1) {
+                System.out.print("\033[1B");
+            }
         }
 
         System.out.print("\033[2B\r");
