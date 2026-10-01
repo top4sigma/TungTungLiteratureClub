@@ -15,7 +15,7 @@ public class Cutscene {
     /**
      * Make a text based cutscene using this function. Pass in a path to a file as a string. 
      */
-    public static void CutsceneStart(String path) throws IOException{
+    public static void CutsceneStart(String path) throws IOException, Exception {
         BufferedReader bfro = new BufferedReader(new FileReader(path));
 
         String character = null;
