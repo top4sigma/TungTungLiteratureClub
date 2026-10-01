@@ -11,9 +11,8 @@ public class Cutscene {
      *
      * @param path path to the cutscene file
      * @throws IOException if the file cannot be read
-     * @throws Exception if dialogue output fails
      */
-    public static void cutsceneStart(String path) throws IOException, Exception {
+    public static void cutsceneStart(String path) throws IOException {
 
         try (BufferedReader reader = new BufferedReader(new FileReader(path))) {
 
@@ -32,35 +31,22 @@ public class Cutscene {
 
                 // Lines beginning with * are dialogue
                 else if (line.startsWith("*")) {
+
+                    // Output previous textbox
                     outputDialogue(character, dialogue);
 
+                    // Start new textbox
                     dialogue.setLength(0);
-                    dialogue.append(line);
-                }
-
-                // First non-dialogue line is the character name
-                else if (character == null) {
-                    character = line;
-                }
-
-                // Additional dialogue lines
-                else {
-                    if (dialogue.length() > 0) {
-                        dialogue.append('\n');
-                    }
                     dialogue.append(line);
                 }
             }
 
-            // Output the final textbox
+            // Output the final textbox if the file doesn't end with a blank line
             outputDialogue(character, dialogue);
         }
     }
 
-    private static void outputDialogue(
-            String character,
-            StringBuilder dialogue) throws Exception {
-
+    private static void outputDialogue(String character, StringBuilder dialogue) {
         if (character != null && dialogue.length() > 0) {
             DialogueSystem.outputText(dialogue.toString(), character);
         }
