@@ -1,66 +1,158 @@
 package subsystems;
+
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+
 import org.jline.terminal.Terminal;
-import org.jline.utils.InfoCmp;
-import java.nio.file.*;
 
-public class TitleScreen {
+public final class TitleScreen {
 
-    private static String[] menuLines;
+    private static final Path MENU_FILE = Path.of("assets", "menu.txt");
     private static final int OPT_ROW = 15;
 
-    static {
-        try {
-            menuLines = new String(Files.readAllBytes(Paths.get("assets/menu.txt")))
-                .split("\n");
-        } catch (Exception e) {
-            menuLines = new String[0];
-        }
+    private static final String[] OPTIONS = {
+            "Play",
+            "Settings",
+            "Quit"
+    };
+
+    private static final String[] MENU_LINES = loadMenu();
+
+    private TitleScreen() {
+        // Utility class
     }
 
     public static int show() throws Exception {
-        String[] options = {"Play", "Settings", "Quit"};
+
         int selected = 0;
 
-        try {
-            while (true) {
-                Inputs.clearScreen();
-                Terminal t = Inputs.getTerminal();
+        while (true) {
 
-                // menu.txt background
-                for (int i = 0; i < menuLines.length; i++) {
-                    cursorTo(i + 1, 1);
-                    t.writer().print(menuLines[i]);
-                }
+            render(selected);
 
-                for (int i = 0; i < options.length; i++) {
-                    cursorTo(OPT_ROW + i, 1);
-                    t.writer().print("\033[0m");
-                    if (selected == i) t.writer().print("\033[7m");
-                    t.writer().print(" " + options[i] + " ");
-                    if (selected == i) t.writer().print("\033[27m");
-                }
+            int key = Inputs.readKey();
 
-                Inputs.flush();
-                int key = Inputs.readKey();
+            switch (key) {
 
-                if (key == 27) {
-                    int second = Inputs.readKey();
-                    int third = Inputs.readKey();
+                case 27 -> {
+                    int direction = readArrowKey();
 
-                    if ((second == 'O' || second == '[') && third == 'A') {
-                        selected = (selected - 1 + options.length) % options.length;
-                    } else if ((second == 'O' || second == '[') && third == 'B') {
-                        selected = (selected + 1) % options.length;
+                    if (direction == -1) {
+                        selected = (selected - 1 + OPTIONS.length)
+                                % OPTIONS.length;
+                    } else if (direction == 1) {
+                        selected = (selected + 1)
+                                % OPTIONS.length;
                     }
-                } else if (key == 13 || key == 10) {
+                }
+
+                case 10, 13 -> {
                     return selected;
                 }
             }
-        } finally {
         }
     }
 
-    private static void cursorTo(int row, int col) {
-        Inputs.getTerminal().writer().print("\033[" + row + ";" + col + "H");
+    // -------------------------------------------------------------------------
+    // Rendering
+    // -------------------------------------------------------------------------
+
+    private static void render(int selected) throws Exception {
+
+        Inputs.clearScreen();
+
+        Terminal terminal = Inputs.getTerminal();
+
+        // Draw menu background.
+        for (int i = 0; i < MENU_LINES.length; i++) {
+            cursorTo(terminal, i + 1, 1);
+            terminal.writer().print(MENU_LINES[i]);
+        }
+
+        // Draw menu options.
+        for (int i = 0; i < OPTIONS.length; i++) {
+
+            cursorTo(
+                    terminal,
+                    OPT_ROW + i,
+                    1
+            );
+
+            boolean highlighted = selected == i;
+
+            if (highlighted) {
+                terminal.writer().print("\033[7m");
+            }
+
+            terminal.writer().print(
+                    " " + OPTIONS[i] + " "
+            );
+
+            if (highlighted) {
+                terminal.writer().print("\033[27m");
+            }
+        }
+
+        Inputs.flush();
+    }
+
+    // -------------------------------------------------------------------------
+    // Input
+    // -------------------------------------------------------------------------
+
+    /**
+     * Reads an ANSI arrow key sequence.
+     *
+     * @return -1 for up, 1 for down, 0 for anything else
+     */
+    private static int readArrowKey() throws Exception {
+
+        int second = Inputs.readKey();
+        int third = Inputs.readKey();
+
+        if (second != 'O' && second != '[') {
+            return 0;
+        }
+
+        return switch (third) {
+            case 'A' -> -1; // Up
+            case 'B' -> 1;  // Down
+            default -> 0;
+        };
+    }
+
+    // -------------------------------------------------------------------------
+    // Menu loading
+    // -------------------------------------------------------------------------
+
+    private static String[] loadMenu() {
+
+        try {
+            return Files.readString(MENU_FILE)
+                    .split("\\R", -1);
+
+        } catch (IOException e) {
+            System.err.println(
+                    "Could not load " + MENU_FILE + ": "
+                            + e.getMessage()
+            );
+
+            return new String[0];
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // Cursor
+    // -------------------------------------------------------------------------
+
+    private static void cursorTo(
+            Terminal terminal,
+            int row,
+            int column
+    ) {
+        terminal.writer().print(
+                "\033[" + row + ";" + column + "H"
+        );
     }
 }
