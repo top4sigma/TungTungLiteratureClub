@@ -4,51 +4,49 @@ import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
 
+import subsystems.DialogueSystem;
+
 public class Cutscene {
+    public static void main(String[] args){
 
-    /**
-     * Makes a text-based cutscene using the specified file.
-     *
-     * @param path path to the cutscene file
-     * @throws IOException if the file cannot be read
-     */
-    public static void cutsceneStart(String path) throws IOException {
-
-        try (BufferedReader reader = new BufferedReader(new FileReader(path))) {
-
-            String character = null;
-            String line;
-            StringBuilder dialogue = new StringBuilder();
-
-            while ((line = reader.readLine()) != null) {
-
-                // Blank line = end of textbox
-                if (line.isBlank()) {
-                    outputDialogue(character, dialogue);
-                    character = null;
-                    dialogue.setLength(0);
-                }
-
-                // Lines beginning with * are dialogue
-                else if (line.startsWith("*")) {
-
-                    // Output previous textbox
-                    outputDialogue(character, dialogue);
-
-                    // Start new textbox
-                    dialogue.setLength(0);
-                    dialogue.append(line);
-                }
-            }
-
-            // Output the final textbox if the file doesn't end with a blank line
-            outputDialogue(character, dialogue);
-        }
     }
 
-    private static void outputDialogue(String character, StringBuilder dialogue) {
-        if (character != null && dialogue.length() > 0) {
-            DialogueSystem.outputText(dialogue.toString(), character);
+
+    /**
+     * Make a text based cutscene using this function. Pass in a path to a file as a string. 
+     */
+    public static void CutsceneStart(String path) throws IOException{
+        BufferedReader bfro = new BufferedReader(new FileReader(path));
+
+        String character = null;
+        String st;
+
+        StringBuilder dialogue = new StringBuilder();
+
+        while ((st = bfro.readLine()) != null) {
+            if (st.trim().isEmpty()) {
+
+                if (character != null && dialogue.length() > 0) {
+                    subsystems.DialogueSystem.outputText(dialogue.toString(), character);
+                    // waitForEnter();
+                }
+
+                character = null;
+                dialogue.setLength(0);
+            }
+
+            else if (st.startsWith("*")) {
+
+                // Print previous textbox
+                if (character != null && dialogue.length() > 0) {
+                    subsystems.DialogueSystem.outputText(dialogue.toString(), character);
+                    // waitForEnter();
+                }
+
+                // Start the new textbox
+                dialogue.setLength(0);
+                dialogue.append(st);
+            }
         }
     }
 }
