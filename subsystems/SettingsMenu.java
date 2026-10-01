@@ -116,6 +116,12 @@ public class SettingsMenu {
                         settings.put("termWidth", w);
                         settings.put("termHeight", h);
                         saveSettings(settings);
+
+                        ProcessBuilder compile = new ProcessBuilder("javac", "-cp", ".", "GenerateAssets.java");
+                        compile.directory(new File("."));
+                        compile.inheritIO();
+                        compile.start();
+
                         ProcessBuilder pb = new ProcessBuilder("java", "-cp", ".", "GenerateAssets", w, h);
                         pb.directory(new File("."));
                         pb.inheritIO();

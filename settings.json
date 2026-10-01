@@ -1,5 +1,7 @@
 {
   "textSpeed": "Medium",
   "volume": "",
-  "difficulty": ""
+  "difficulty": "",
+  "termWidth": "314",
+  "termHeight": "24"
 }
