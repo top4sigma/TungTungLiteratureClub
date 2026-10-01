@@ -10,7 +10,7 @@ public class TitleScreen {
 
     static {
         try {
-            menuLines = new String(Files.readAllBytes(Paths.get("assets/menu.txt")))
+            menuLines = new String(Files.readAllBytes(Paths.get("assets/TitleScreen.txt")))
                 .split("\n");
         } catch (Exception e) {
             menuLines = new String[0];
