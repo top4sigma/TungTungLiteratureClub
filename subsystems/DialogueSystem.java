@@ -1,10 +1,22 @@
 package subsystems;
+
 import java.io.*;
 import java.util.*;
 
+import org.jline.terminal.Terminal;
+import org.jline.terminal.TerminalBuilder;
+
 public class DialogueSystem {
 
+    private static Terminal terminal;
+
     public static void main(String[] args) throws Exception {
+
+        // Create JLine terminal
+        terminal = TerminalBuilder.builder()
+                .system(true)
+                .build();
+
         String path = "./dump.txt";
 
         BufferedReader bfro = new BufferedReader(
@@ -56,31 +68,57 @@ public class DialogueSystem {
         }
 
         bfro.close();
+        terminal.close();
     }
 
 
     private static long getDelay() {
         String speed = "Medium";
-        try (BufferedReader br = new BufferedReader(new FileReader("settings.json"))) {
+
+        try (BufferedReader br = new BufferedReader(
+                new FileReader("settings.json"))) {
+
             StringBuilder json = new StringBuilder();
             String line;
-            while ((line = br.readLine()) != null) json.append(line.trim());
+
+            while ((line = br.readLine()) != null) {
+                json.append(line.trim());
+            }
+
             String content = json.toString();
+
             int idx = content.indexOf("\"textSpeed\"");
+
             if (idx >= 0) {
                 idx = content.indexOf(':', idx) + 1;
+
                 int end = content.indexOf('"', idx + 1);
-                if (end > idx) speed = content.substring(idx + 1, end);
+
+                if (end > idx) {
+                    speed = content.substring(idx + 1, end);
+                }
             }
-        } catch (IOException ignored) {}
+
+        } catch (IOException ignored) {
+        }
+
         switch (speed.toLowerCase()) {
-            case "fast":   return 20;
-            case "slow":   return 100;
-            default:       return 60;
+            case "fast":
+                return 20;
+
+            case "slow":
+                return 100;
+
+            default:
+                return 60;
         }
     }
 
-    private static void printSlow(String text, long delay) throws Exception {
+
+    private static void printSlow(
+            String text,
+            long delay) throws Exception {
+
         for (char c : text.toCharArray()) {
             System.out.print(c);
             System.out.flush();
@@ -89,7 +127,10 @@ public class DialogueSystem {
     }
 
 
-    public static void outputText(String input, String character) throws Exception {
+    public static void outputText(
+            String input,
+            String character) throws Exception {
+
         long delay = getDelay();
 
         final int BOX_WIDTH = 59;
@@ -100,12 +141,14 @@ public class DialogueSystem {
         int textWidth = BOX_WIDTH - SPRITE_SPACE - 1;
 
         for (String line : input.split("\n")) {
+
             if (line.isEmpty()) {
                 rows.add("");
                 continue;
             }
 
             for (int i = 0; i < line.length(); i += textWidth) {
+
                 rows.add(line.substring(
                         i,
                         Math.min(i + textWidth, line.length())
@@ -117,50 +160,84 @@ public class DialogueSystem {
             rows.add("");
         }
 
-        // Automatically detect terminal dimensions
-        int[] terminalSize = getTerminalSize();
-        int terminalWidth = terminalSize[0];
-        int terminalHeight = terminalSize[1];
 
-        // Center the textbox horizontally
-        int leftPadding = Math.max(0, (terminalWidth - BOX_WIDTH) / 2);
+        /*
+         * Get actual terminal dimensions from JLine.
+         */
+        int terminalWidth = terminal.getWidth();
+        int terminalHeight = terminal.getHeight();
+
+
+        /*
+         * Center the textbox horizontally.
+         */
+        int leftPadding = Math.max(
+                0,
+                (terminalWidth - BOX_WIDTH) / 2
+        );
+
         String padding = " ".repeat(leftPadding);
 
-        // Calculate how far down the textbox needs to be
+
+        /*
+         * Calculate textbox height.
+         */
         int boxHeight = rows.size() + 2;
-        int topPadding = Math.max(0, terminalHeight - boxHeight);
 
-        // Move to the bottom of the terminal
-        System.out.print("\033[" + terminalHeight + ";1H");
 
-        // Move up to where the textbox should start
-        if (topPadding > 0) {
-            System.out.print("\033[" + topPadding + "A");
-        }
+        /*
+         * Calculate the top row of the textbox.
+         */
+        int topRow = Math.max(
+                1,
+                terminalHeight - boxHeight + 1
+        );
 
-        // Top border
+
+        /*
+         * Move cursor to the top-left corner
+         * of the textbox.
+         */
+        System.out.print(
+                "\033[" +
+                topRow +
+                ";" +
+                (leftPadding + 1) +
+                "H"
+        );
+
+
+        /*
+         * Top border.
+         */
         String title = "════ " + character + " ";
+
         int remaining = BOX_WIDTH - title.length();
 
         System.out.println(
-                padding +
                 "╔" +
                 title +
-                "═".repeat(Math.max(0, remaining)) +
+                "═".repeat(
+                        Math.max(0, remaining)
+                ) +
                 "╗"
         );
 
-        // Dialogue text
+
+        /*
+         * Dialogue text.
+         */
         for (String row : rows) {
 
             String text = row;
 
             if (text.length() < textWidth) {
-                text += " ".repeat(textWidth - text.length());
+                text += " ".repeat(
+                        textWidth - text.length()
+                );
             }
 
             System.out.println(
-                    padding +
                     "║" +
                     " ".repeat(SPRITE_SPACE + 1) +
                     text +
@@ -168,111 +245,68 @@ public class DialogueSystem {
             );
         }
 
-        // Bottom border
+
+        /*
+         * Bottom border.
+         */
         System.out.println(
-                padding +
                 "╚" +
                 "═".repeat(BOX_WIDTH) +
                 "╝"
         );
 
-        /*
-        * Move back to the first dialogue line.
-        */
-        System.out.print("\033[" + (rows.size() + 1) + "A");
 
+        /*
+         * Move back to the first dialogue line.
+         */
+        System.out.print(
+                "\033[" +
+                (rows.size() + 1) +
+                "A"
+        );
+
+
+        /*
+         * Type out the dialogue.
+         */
         for (int i = 0; i < rows.size(); i++) {
 
-            // Move to the text area
+            /*
+             * Move to the text area.
+             *
+             * leftPadding:
+             *   centers the box.
+             *
+             * SPRITE_SPACE:
+             *   reserves space for the sprite.
+             */
             System.out.print(
                     "\033[" +
                     (leftPadding + SPRITE_SPACE + 2) +
                     "G"
             );
 
-            printSlow(rows.get(i), delay);
+            printSlow(
+                    rows.get(i),
+                    delay
+            );
 
             if (i < rows.size() - 1) {
                 System.out.print("\033[1B");
             }
         }
 
-        // Move cursor below the textbox
-        System.out.print("\033[" + (rows.size() + 1) + "B");
+
+        /*
+         * Move cursor below the textbox.
+         */
+        System.out.print(
+                "\033[" +
+                (rows.size() + 1) +
+                "B"
+        );
+
         System.out.print("\r");
         System.out.flush();
-    }
-
-
-    /**
-     * Gets the current terminal width and height.
-     *
-     * Returns:
-     * [0] = width
-     * [1] = height
-     */
-    private static int[] getTerminalSize() {
-
-        // Windows
-        if (System.getProperty("os.name").toLowerCase().contains("win")) {
-
-            try {
-                Process process = new ProcessBuilder(
-                        "cmd", "/c", "mode con"
-                ).redirectErrorStream(true).start();
-
-                BufferedReader reader = new BufferedReader(
-                        new InputStreamReader(process.getInputStream())
-                );
-
-                String line;
-                int width = -1;
-                int height = -1;
-
-                while ((line = reader.readLine()) != null) {
-
-                    line = line.trim();
-
-                    if (line.startsWith("Columns:")) {
-                        width = Integer.parseInt(
-                                line.substring("Columns:".length()).trim()
-                        );
-                    }
-
-                    else if (line.startsWith("Lines:")) {
-                        height = Integer.parseInt(
-                                line.substring("Lines:".length()).trim()
-                        );
-                    }
-                }
-
-                process.waitFor();
-
-                if (width > 0 && height > 0) {
-                    return new int[] { width, height };
-                }
-
-            } catch (Exception ignored) {
-            }
-        }
-
-        // Linux / macOS
-        try {
-            String columns = System.getenv("COLUMNS");
-            String lines = System.getenv("LINES");
-
-            if (columns != null && lines != null) {
-                int width = Integer.parseInt(columns);
-                int height = Integer.parseInt(lines);
-
-                if (width > 0 && height > 0) {
-                    return new int[] { width, height };
-                }
-            }
-        } catch (Exception ignored) {
-        }
-
-        // Safe fallback
-        return new int[] { 120, 30 };
     }
 }
